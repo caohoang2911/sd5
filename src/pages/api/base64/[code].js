@@ -1,8 +1,42 @@
-const nodeHtmlToImage = require('node-html-to-image')
+
 // import  clipboardy from 'clipboardy';
+let chrome = {};
+let puppeteer;
+
+if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+  chrome = require("chrome-aws-lambda");
+  puppeteer = require("puppeteer-core");
+} else {
+  puppeteer = require("puppeteer");
+}
+
+const nodeHtmlToImage = require('node-html-to-image')
+
 export default  async function handler(req, res) {
-  const data = await generateImage();   
-  res.status(200).send(data)
+  let options = {};
+
+  if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+    options = {
+      args: [...chrome.args, "--hide-scrollbars", "--disable-web-security"],
+      defaultViewport: chrome.defaultViewport,
+      executablePath: await chrome.executablePath,
+      headless: true,
+      ignoreHTTPSErrors: true,
+      ignoreDefaultArgs: ['--disable-extensions']}
+    };
+  }
+
+  try {
+    await puppeteer.launch(options);
+    const data = await generateImage();   
+    res.status(200).send(data)
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+
+
+
 }
 
 // export const config = {
